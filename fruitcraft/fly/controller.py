@@ -1,0 +1,93 @@
+"""FlyCombatController: ties game state -> observations -> brains -> commands.
+
+The hivemind directive is a per-team suggestion (an objective position and an
+aggression mode). It only ever enters the flies as sensory input; each fly
+remains free to do its own thing.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+from .encoding import CombatObservation
+from .brainpool import UnitBrainPool
+
+MOVE_STEP = 64          # pixels per movement command
+DIRECTION_RANGE = 512.0  # pixels over which a direction signal saturates
+
+
+@dataclass
+class HivemindDirective:
+    """A suggestion broadcast to every fly, not an order."""
+    objective_x: float
+    objective_y: float
+    attack: float = 1.0  # 0..1 aggression mode
+
+
+def build_observation(unit: dict, visible_enemies: list[dict],
+                      directive: HivemindDirective | None) -> CombatObservation:
+    obs = CombatObservation()
+    obs.low_health = 1.0 - unit["hp"] / max(unit["max_hp"], 1)
+    obs.under_attack = 1.0 if unit["under_attack"] else 0.0
+    obs.weapon_ready = 1.0 if unit["gw_cooldown"] == 0 else 0.0
+    if visible_enemies:
+        nearest = min(visible_enemies,
+                      key=lambda e: (e["x"] - unit["x"]) ** 2 + (e["y"] - unit["y"]) ** 2)
+        dx, dy = nearest["x"] - unit["x"], nearest["y"] - unit["y"]
+        dist = float(np.hypot(dx, dy))
+        obs.enemy_dx = float(np.clip(dx / DIRECTION_RANGE, -1, 1))
+        obs.enemy_dy = float(np.clip(dy / DIRECTION_RANGE, -1, 1))
+        obs.enemy_near = float(np.clip(1.0 - dist / DIRECTION_RANGE, 0.01, 1))
+    if directive is not None:
+        dx, dy = directive.objective_x - unit["x"], directive.objective_y - unit["y"]
+        obs.hive_dx = float(np.clip(dx / DIRECTION_RANGE, -1, 1))
+        obs.hive_dy = float(np.clip(dy / DIRECTION_RANGE, -1, 1))
+        obs.hive_attack = directive.attack
+    return obs
+
+
+class FlyCombatController:
+    """Issues engine commands for every controlled unit each decision tick."""
+
+    def __init__(self, game, pool: UnitBrainPool, controlled_types: set[int]):
+        self.game = game
+        self.pool = pool
+        self.controlled_types = controlled_types
+        self.directive: HivemindDirective | None = None
+
+    def set_directive(self, directive: HivemindDirective | None):
+        self.directive = directive
+
+    def tick(self) -> dict[int, str]:
+        units = [u for u in self.game.my_units()
+                 if u["type"] in self.controlled_types and u["completed"]]
+        enemies = self.game.enemy_units_visible()
+        observations = {
+            u["id"]: build_observation(u, enemies, self.directive) for u in units}
+        actions = self.pool.tick(observations)
+        by_id = {u["id"]: u for u in units}
+        for tag, action in actions.items():
+            self._execute(by_id[tag], action, enemies)
+        return actions
+
+    def _execute(self, unit: dict, action: str, enemies: list[dict]):
+        x, y = unit["x"], unit["y"]
+        if action == "north":
+            self.game.move(unit["id"], x, y - MOVE_STEP)
+        elif action == "south":
+            self.game.move(unit["id"], x, y + MOVE_STEP)
+        elif action == "east":
+            self.game.move(unit["id"], x + MOVE_STEP, y)
+        elif action == "west":
+            self.game.move(unit["id"], x - MOVE_STEP, y)
+        elif action == "attack":
+            if enemies:
+                nearest = min(enemies, key=lambda e: (e["x"] - x) ** 2 + (e["y"] - y) ** 2)
+                self.game.attack_unit(unit["id"], nearest["id"])
+            elif self.directive is not None:
+                self.game.attack_move(unit["id"], int(self.directive.objective_x),
+                                      int(self.directive.objective_y))
+        else:  # stay: hold roughly in place (engine has no Hold command wired)
+            self.game.move(unit["id"], x, y)
