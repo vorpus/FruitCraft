@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fruitcraft"
+version = "0.1.0"
+description = "StarCraft: Brood War (OpenSnowstorm) driven by FruitLoop fly brains — one MaleCNS brain per combat unit"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "fruitloop",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "cmake", "ninja", "pybind11"]
+
+[tool.setuptools.packages.find]
+include = ["fruitcraft*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

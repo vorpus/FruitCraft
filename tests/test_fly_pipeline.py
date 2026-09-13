@@ -17,7 +17,7 @@ def pipeline(synthetic_flies):
     encoder = SensoryEncoder(pick_populations_synthetic(
         synthetic_flies.graph.n_neurons, pop_size=8))
     decoder = ActionDecoder.calibrate(
-        synthetic_flies, encoder, readout_size=12, stay_floor=0.01)
+        synthetic_flies, encoder, readout_size=12, stay_floor=0.15)
     return synthetic_flies, encoder, decoder
 
 
@@ -44,10 +44,13 @@ def test_prototype_inputs_decode_to_their_action(pipeline):
     assert hits >= 4, f"only {hits}/5 prototypes decoded to their own action"
 
 
-def test_idle_observation_stays(pipeline):
+def test_zero_observation_stays(pipeline):
+    """No drive on any channel -> no spikes -> STAY, deterministically.
+    (A unit with weapon_ready=1 is NOT zero-drive; use a cooling-down one.)"""
     flies, encoder, decoder = pipeline
     pool = UnitBrainPool(flies, encoder, decoder, decision_ms=60.0)
-    result = pool.tick({7: build_observation(make_unit(7), [], None)})
+    unit = make_unit(7, gw_cooldown=5)  # weapon_ready = 0
+    result = pool.tick({7: build_observation(unit, [], None)})
     pool.sync_units([])
     assert result[7] == STAY
 

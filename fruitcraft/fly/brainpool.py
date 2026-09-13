@@ -14,12 +14,21 @@ from .decoding import ActionDecoder
 
 
 class UnitBrainPool:
+    """reset_each_tick: both the raw MaleCNS graph (at lif_v1 gain) and dense
+    synthetic graphs are excitatory-dominant enough that strong stimulation
+    latches them into a saturated attractor that never decays. Resetting each
+    fly at the start of its decision makes every decision a clean transient
+    matching the calibration condition. Set False to keep cross-tick neural
+    state (the long-term research mode; needs a sub-critical gain to be
+    informative rather than saturated)."""
+
     def __init__(self, flies, encoder: SensoryEncoder, decoder: ActionDecoder,
-                 decision_ms: float = 20.0):
+                 decision_ms: float = 20.0, reset_each_tick: bool = True):
         self.flies = flies
         self.encoder = encoder
         self.decoder = decoder
         self.decision_ms = decision_ms
+        self.reset_each_tick = reset_each_tick
         self.slot_of: dict[int, int] = {}  # unit tag -> fly slot
 
     def sync_units(self, alive_tags) -> None:
@@ -38,10 +47,12 @@ class UnitBrainPool:
             return {}
         tags = list(observations.keys())
         slots = np.array([self.slot_of[t] for t in tags])
+        if self.reset_each_tick:
+            self.flies.reset(slots)  # must precede apply: reset clears i_ext too
         self.encoder.apply(self.flies, slots, [observations[t] for t in tags])
         self.flies.reset_spike_counts(slots)
         self.flies.advance_ms(self.decision_ms)
-        actions = self.decoder.decode(self.flies, slots)
+        actions = self.decoder.decode(self.flies, slots, window_ms=self.decision_ms)
         return dict(zip(tags, actions))
 
     @property

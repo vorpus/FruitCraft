@@ -27,15 +27,23 @@ PROTOTYPES: dict[str, dict[str, float]] = {
 
 
 class ActionDecoder:
-    def __init__(self, readouts: dict[str, np.ndarray], stay_floor: float = 0.05):
+    """Readout populations differ in excitability, so raw spike counts are not
+    comparable across actions. Each action's logit is therefore normalized by
+    that readout's own response to its prototype at calibration time:
+    logit ~ 1.0 means 'responding as strongly as during calibration'."""
+
+    def __init__(self, readouts: dict[str, np.ndarray],
+                 calib_rate: dict[str, float], stay_floor: float = 0.15):
         self.readouts = readouts
-        self.stay_floor = stay_floor  # mean spikes/readout-neuron below which we STAY
+        self.calib_rate = calib_rate  # calibration spikes/neuron/ms per action
+        self.stay_floor = stay_floor  # STAY below this fraction of calib response
         self._flat = np.concatenate([readouts[a] for a in ACTIONS])
         self._sizes = [len(readouts[a]) for a in ACTIONS]
+        self._rates = np.array([calib_rate[a] for a in ACTIONS])
 
     @classmethod
     def calibrate(cls, flies, encoder: SensoryEncoder, readout_size=150,
-                  probe_ms=100.0, stay_floor: float = 0.05) -> "ActionDecoder":
+                  probe_ms=100.0, stay_floor: float = 0.15) -> "ActionDecoder":
         """Probe each action prototype on fly slot 0 and pick discriminative neurons."""
         responses = {}
         for action in ACTIONS:
@@ -49,7 +57,7 @@ class ActionDecoder:
 
         exclude = np.zeros(len(next(iter(responses.values()))), dtype=bool)
         exclude[encoder.all_input_ids] = True
-        readouts = {}
+        readouts, calib_rate = {}, {}
         for action in ACTIONS:
             others = np.max([responses[a] for a in ACTIONS if a != action], axis=0)
             score = responses[action] - others
@@ -59,18 +67,19 @@ class ActionDecoder:
             if len(top) == 0:
                 raise RuntimeError(f"calibration found no discriminative neurons for {action!r}")
             readouts[action] = np.sort(top).astype(np.uint32)
-        return cls(readouts, stay_floor=stay_floor)
+            calib_rate[action] = float(responses[action][readouts[action]].mean()) / probe_ms
+        return cls(readouts, calib_rate, stay_floor=stay_floor)
 
-    def decode(self, flies, slot_ids: np.ndarray) -> list[str]:
-        """One action per fly slot from spike counts since the last reset."""
+    def decode(self, flies, slot_ids: np.ndarray, window_ms: float) -> list[str]:
+        """One action per fly slot from spike counts accumulated over window_ms."""
         counts = flies.read_spike_counts(neuron_ids=self._flat, batch_ids=slot_ids)
         actions = []
         for row in counts:
-            logits, offset = [], 0
+            means, offset = [], 0
             for size in self._sizes:
-                logits.append(row[offset:offset + size].mean())
+                means.append(row[offset:offset + size].mean())
                 offset += size
-            logits = np.asarray(logits, dtype=np.float64)
+            logits = np.asarray(means) / (self._rates * window_ms)
             best = int(np.argmax(logits))
             actions.append(ACTIONS[best] if logits[best] >= self.stay_floor else STAY)
         return actions

@@ -1,4 +1,27 @@
-# FruitCraft — session handoff (2026-09-11)
+# FruitCraft — session handoff (updated 2026-09-12)
+
+## Update 2026-09-12
+- All 14 tests pass. Fixed the two initial failures properly:
+  - ActionDecoder now normalizes each action's logit by that readout's own
+    calibration response (readout excitability differs); STAY is a relative
+    floor (default 0.15 of calibration response).
+  - Discovered both the synthetic test graph AND the real MaleCNS graph (at
+    lif_v1 gain 0.005) latch into a saturated self-sustaining attractor —
+    activity never decays after stimulation stops (~1% refractory-limited
+    ceiling). UnitBrainPool therefore defaults to `reset_each_tick=True`
+    (reset the fly's slots before each decision; reset must precede
+    encoder.apply since reset clears i_ext). `reset_each_tick=False` is the
+    persistent-state research mode; it needs a sub-critical gain to be useful.
+- Real-graph validation: calibration finds full 150-neuron readouts for all 5
+  actions; all 5 prototypes decode to their own action; a batched 24-unit
+  decision tick costs ~19 ms wall (faster than real time at 1 decision / 0.5
+  game-seconds).
+- Added README.md + pyproject.toml.
+- STILL BLOCKED on Brood War MPQs for anything engine-side (none on machine).
+
+---
+
+# Original handoff (2026-09-11)
 
 StarCraft: Brood War (OpenSnowstorm) driven by FruitLoop fly brains — one
 MaleCNS fly brain per combat unit. Sibling repo: `../FruitLoop-CUDA` (complete,
