@@ -1,4 +1,37 @@
-# FruitCraft — session handoff (updated 2026-09-12)
+# FruitCraft — session handoff (updated 2026-09-12, evening: FIRST REAL BATTLES)
+
+## Update 2026-09-12 evening — the game runs; Milestone 7 reached
+- User supplied MPQs -> `bwdata/` (gitignored; engine needs exact names
+  StarDat.mpq / BrooDat.mpq / Patch_rt.mpq — wrapper auto-symlinks case
+  variants). Maps downloaded: `(2)Benzene.scx` (melee, from sc-docker repo),
+  `m5v5_c_far.scm` (TorchCraft micro map, unused so far).
+- Phase 0 smoke test PASSES (`scripts/smoke_engine.py`): headless boot, melee
+  start units enumerated, spawned marine moves under program control.
+- Full battles run at ~500x real time (~0.6 s wall per 8-marine-vs-10-zergling
+  episode including all fly-brain decisions).
+- Engine combat facts (all verified empirically, tests in git history):
+  - attack_unit REQUIRES target coordinates (silently ret=False without).
+  - attack_move >> attack_unit for ranged units (engages at range vs chasing).
+  - NO auto-acquire: uncommanded units never fight. Every offensive intent
+    must be an explicit command.
+  - Re-issuing commands resets attack sequences -> DPS ~0 if spammed.
+    Controller now only issues when the decoded action changes or the unit
+    went idle (order 3 = guard); STAY issues nothing.
+- Results (8 fly marines vs 10 scripted zerglings, 10 episodes):
+  - scripted attack-move baseline: 10/10 wins (concentrated deathball).
+  - fly swarm: 2/10 wins; +centroid-focus attack variant: 3/10.
+  - Fly losses come from movement decodes scattering the army mid-fight and
+    per-unit targeting splitting focus. Dynamic hivemind directive (live
+    enemy centroid) alone didn't help.
+- Assessment: the engineered encoder/decoder mapping has hit its ceiling.
+  The promising next lever is SELECTION/LEARNING over the interface (evolve
+  encoder populations / readouts / prototypes against battle outcome — at
+  0.6 s/episode we get ~5k battles/hour), and/or letting the hivemind carry
+  cohesion signals the flies are calibrated to obey more strongly.
+- Also possible next: SDL rendering of one env to actually watch battles
+  (OPENBW_ENABLE_UI build flag), vectorized multi-process envs, win-rate CI.
+
+
 
 ## Update 2026-09-12 (later)
 - Encoder switched to POPULATION CODING: a channel's value sets the fraction

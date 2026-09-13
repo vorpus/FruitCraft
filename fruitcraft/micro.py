@@ -70,7 +70,8 @@ class MicroScenario:
         tx = int(np.mean([u["x"] for u in ours]))
         ty = int(np.mean([u["y"] for u in ours]))
         for u in self.game.enemy_units_all():
-            if u["id"] in self.enemy_ids:
+            # only (re)command idle enemies: re-issuing resets attack sequences
+            if u["id"] in self.enemy_ids and (u["idle"] or u["order"] == 3):
                 self.game.attack_move(u["id"], tx, ty)
 
     def status(self) -> dict:

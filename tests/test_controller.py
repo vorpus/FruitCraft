@@ -28,11 +28,29 @@ def test_move_commands_use_bw_axes():
     assert game.commands == [("move", 1, 500, 500 - 64)]  # north is -y
 
 
-def test_attack_targets_nearest_enemy():
+def test_attack_moves_at_nearest_enemy():
     far, near = make_unit(8, x=900, y=500, owner=1), make_unit(9, x=600, y=500, owner=1)
     game, c = _controller("attack", [make_unit(1, x=500, y=500)], [far, near])
     c.tick()
-    assert game.commands == [("attack_unit", 1, 9)]
+    assert game.commands == [("attack_move", 1, 600, 500)]
+
+
+def test_stay_issues_no_command():
+    game, c = _controller("stay", [make_unit(1, x=500, y=500)], [])
+    c.tick()
+    assert game.commands == []
+
+
+def test_unchanged_action_not_reissued_while_busy():
+    unit = dict(make_unit(1, x=500, y=500), idle=False, order=14)  # mid attack-move
+    game, c = _controller("attack", [unit], [make_unit(9, x=600, y=500, owner=1)])
+    c.tick()
+    c.tick()  # same decoded action, unit busy -> no order-resetting spam
+    assert len(game.commands) == 1
+    unit["idle"] = True
+    unit["order"] = 3
+    c.tick()  # went idle -> reissue
+    assert len(game.commands) == 2
 
 
 def test_attack_without_visible_enemy_pushes_to_objective():

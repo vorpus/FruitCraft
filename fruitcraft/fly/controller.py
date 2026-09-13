@@ -16,6 +16,7 @@ from .brainpool import UnitBrainPool
 
 MOVE_STEP = 64          # pixels per movement command
 DIRECTION_RANGE = 512.0  # pixels over which a direction signal saturates
+ORDER_GUARD = 3          # engine order id for an idle/passive unit (empirical)
 
 
 @dataclass
@@ -56,6 +57,7 @@ class FlyCombatController:
         self.pool = pool
         self.controlled_types = controlled_types
         self.directive: HivemindDirective | None = None
+        self._last_action: dict[int, str] = {}
 
     def set_directive(self, directive: HivemindDirective | None):
         self.directive = directive
@@ -70,9 +72,18 @@ class FlyCombatController:
         by_id = {u["id"]: u for u in units}
         for tag, action in actions.items():
             self._execute(by_id[tag], action, enemies)
+        self._last_action = dict(actions)
         return actions
 
     def _execute(self, unit: dict, action: str, enemies: list[dict]):
+        # Command hygiene: this engine has no auto-acquire, and re-issuing a
+        # command resets the unit's attack sequence before its damage frame.
+        # Issue only when the fly changed its mind or the unit has gone idle;
+        # a persisting attack-move keeps the unit fighting on its own.
+        unchanged = self._last_action.get(unit["id"]) == action
+        is_idle = unit["idle"] or unit["order"] == ORDER_GUARD
+        if unchanged and not is_idle:
+            return
         x, y = unit["x"], unit["y"]
         if action == "north":
             self.game.move(unit["id"], x, y - MOVE_STEP)
@@ -83,11 +94,14 @@ class FlyCombatController:
         elif action == "west":
             self.game.move(unit["id"], x - MOVE_STEP, y)
         elif action == "attack":
+            # attack-move (not attack-unit): the unit engages at weapon range
+            # instead of chasing into melee, and keeps fighting when its
+            # target dies
             if enemies:
                 nearest = min(enemies, key=lambda e: (e["x"] - x) ** 2 + (e["y"] - y) ** 2)
-                self.game.attack_unit(unit["id"], nearest["id"])
+                self.game.attack_move(unit["id"], nearest["x"], nearest["y"])
             elif self.directive is not None:
                 self.game.attack_move(unit["id"], int(self.directive.objective_x),
                                       int(self.directive.objective_y))
-        else:  # stay: hold roughly in place (engine has no Hold command wired)
-            self.game.move(unit["id"], x, y)
+        # stay: deliberately no command — a move-to-self would cancel any
+        # ongoing attack (and nothing auto-acquires in this engine)

@@ -11,7 +11,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-REQUIRED_MPQS = ["STARDAT.MPQ", "BROODAT.MPQ", "patch_rt.mpq"]
+# exact names the engine opens (case-sensitive on Linux)
+REQUIRED_MPQS = ["StarDat.mpq", "BrooDat.mpq", "Patch_rt.mpq"]
 
 MATCH_START, MATCH_END, MATCH_FRAME, UNIT_DESTROY = None, None, None, None  # bound on import
 
@@ -30,7 +31,13 @@ class BroodWarGame:
                  melee=True, seed: int | None = None):
         global MATCH_START, MATCH_END, MATCH_FRAME, UNIT_DESTROY
         data_dir = Path(data_dir).resolve()
-        missing = [m for m in REQUIRED_MPQS if _find_mpq(data_dir, m) is None]
+        missing = []
+        for name in REQUIRED_MPQS:
+            found = _find_mpq(data_dir, name)
+            if found is None:
+                missing.append(name)
+            elif found.name != name:  # engine wants exact case; bridge the gap
+                (data_dir / name).symlink_to(found.name)
         if missing:
             raise FileNotFoundError(
                 f"Brood War data files missing from {data_dir}: {missing}. "
@@ -116,8 +123,10 @@ class BroodWarGame:
     def attack_move(self, unit_id: int, x: int, y: int) -> bool:
         return self._e.command(unit_id, self.COMMANDS["ATTACK_MOVE"], -1, int(x), int(y))
 
-    def attack_unit(self, unit_id: int, target_id: int) -> bool:
-        return self._e.command(unit_id, self.COMMANDS["ATTACK_UNIT"], target_id)
+    def attack_unit(self, unit_id: int, target_id: int, x: int, y: int) -> bool:
+        # the engine rejects attack-unit commands without target coordinates
+        return self._e.command(unit_id, self.COMMANDS["ATTACK_UNIT"], target_id,
+                               int(x), int(y))
 
     # ---------------------------------------------------------- scenario ops
     def spawn(self, player_id: int, unit_type: int, x: int, y: int) -> int:
