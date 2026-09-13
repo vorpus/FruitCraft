@@ -1,0 +1,10 @@
+--- a/mini-openbwapi/CMakeLists.txt
++++ b/mini-openbwapi/CMakeLists.txt
+@@ -17,7 +17,6 @@ include_directories(
+ )
+ 
+ add_definitions(-DOPENBW_NO_SDL_IMAGE)
+-add_definitions(-DOPENBW_NO_SDL_MIXER)
+ 
+ set(mini-openbwapi_srcs openbwapi.cpp)
+ 

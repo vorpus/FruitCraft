@@ -28,7 +28,7 @@ class BroodWarGame:
     """Frame-stepped headless Brood War match."""
 
     def __init__(self, data_dir, map_path, my_race="terran", enemy_race="zerg",
-                 melee=True, seed: int | None = None):
+                 melee=True, seed: int | None = None, gui: bool = False):
         global MATCH_START, MATCH_END, MATCH_FRAME, UNIT_DESTROY
         data_dir = Path(data_dir).resolve()
         missing = []
@@ -60,7 +60,7 @@ class BroodWarGame:
         self.COMMANDS = _engine.COMMANDS
         self.seed = seed
         self.result: bool | None = None  # None = in progress, True = won
-        self._e.set_gui(False)
+        self._e.set_gui(gui)  # needs a build with the SDL renderer when True
         self._begin_match()
 
     def _begin_match(self):
