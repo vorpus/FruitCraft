@@ -140,6 +140,10 @@ class BroodWarGame:
     def map_pixel_size(self) -> tuple[int, int]:
         return self._e.map_width() * 32, self._e.map_height() * 32
 
+    def select(self, unit_id: int | None):
+        """Show the game's selection circle under a unit (renderer builds)."""
+        self._e.select_unit(-1 if unit_id is None else int(unit_id))
+
     def look_at(self, x: int, y: int, view=(800, 600)):
         """Center the renderer's camera on a map-pixel position (UI builds)."""
         w, h = self.map_pixel_size()

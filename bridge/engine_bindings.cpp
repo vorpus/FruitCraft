@@ -99,6 +99,9 @@ PYBIND11_MODULE(_engine, m) {
     m.def("set_gui", [](bool enable) { game().setGUI(enable); });
     m.def("set_camera", [](int x, int y) { game().setScreenPosition(Position(x, y)); },
           "Top-left corner of the 800x600 view, map pixels (UI builds only)");
+    m.def("select_unit", [](int unit_id) {
+        game().setSelectedUnit(unit_id >= 0 ? game().getUnit(unit_id) : nullptr);
+    }, "Draw the game's selection circle under this unit (UI builds only)");
     m.def("set_random_seed", [](uint32_t seed) { game().setRandomSeed(seed); });
     m.def("disable_triggers", []() { game().disableTriggers(); });
 

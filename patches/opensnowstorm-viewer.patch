@@ -1,8 +1,8 @@
 diff --git a/mini-openbwapi/openbwapi.cpp b/mini-openbwapi/openbwapi.cpp
-index 707b724..87fe3aa 100644
+index 707b724..41c2884 100644
 --- a/mini-openbwapi/openbwapi.cpp
 +++ b/mini-openbwapi/openbwapi.cpp
-@@ -1316,6 +1316,14 @@ void Game::setGUI(bool enable) {
+@@ -1316,6 +1316,24 @@ void Game::setGUI(bool enable) {
  void Game::setFrameSkip(int frameskip) {
  }
  
@@ -14,19 +14,30 @@ index 707b724..87fe3aa 100644
 +#endif
 +}
 +
++void Game::setSelectedUnit(Unit u) {
++#ifdef OPENBW_ENABLE_UI
++	if (impl->funcs.ui) {
++		auto& ui = impl->funcs.ui->ui;
++		ui.current_selection_clear();
++		if (u && u->u) ui.current_selection_add(u->u);
++	}
++#endif
++}
++
  void Game::setCommandOptimizationLevel(int level) {
  }
  
 diff --git a/mini-openbwapi/openbwapi.h b/mini-openbwapi/openbwapi.h
-index 951e9b0..4bfc46e 100644
+index 951e9b0..220e665 100644
 --- a/mini-openbwapi/openbwapi.h
 +++ b/mini-openbwapi/openbwapi.h
-@@ -1080,7 +1080,7 @@ public:
+@@ -1080,7 +1080,8 @@ public:
  	double getAverageFPS() {
  		return 1.0;
  	}
 -	void setScreenPosition(Position) {}
 +	void setScreenPosition(Position pos);
++	void setSelectedUnit(Unit u);
  	void vPrintf(const char* fmt, va_list args);
  	void update();
  	

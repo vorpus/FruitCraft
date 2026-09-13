@@ -181,10 +181,12 @@ def main():
                     if alive and hero not in alive:
                         hero = alive[0]
                     if hero in ctrl.last_observations:
-                        # camera follows the hero: the marine whose brain is shown
+                        # camera + selection circle follow the hero: the marine
+                        # whose brain panel is shown
                         u = next((x for x in game.my_units() if x["id"] == hero), None)
                         if u:
                             game.look_at(u["x"], u["y"])
+                            game.select(hero)
                         if view is not None and view.alive():
                             view.update(hero, ctrl.last_observations[hero],
                                         pool.last_logits[hero], actions[hero],
