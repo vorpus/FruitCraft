@@ -15,11 +15,14 @@ EOF
 )
 if [ -n "${SDL_DIR:-}" ] && [ -f "$SDL_DIR/libSDL2-2.0.so" ]; then
     echo "SDL renderer: ENABLED (lib from $SDL_DIR)"
-    # upstream's OPENBW_NO_SDL_MIXER path doesn't compile; build with the real
-    # mixer instead (header in bridge/sdl_compat, lib from the wheel)
-    if grep -q "OPENBW_NO_SDL_MIXER" third_party/opensnowstorm/mini-openbwapi/CMakeLists.txt; then
-        git -C third_party/opensnowstorm apply ../../patches/opensnowstorm-enable-mixer.patch
-    fi
+    # small build-time patches to the submodule (mixer compile fix, camera
+    # control); each applies once, idempotently
+    for p in patches/*.patch; do
+        if git -C third_party/opensnowstorm apply --check "../../$p" 2>/dev/null; then
+            git -C third_party/opensnowstorm apply "../../$p"
+            echo "applied $p"
+        fi
+    done
     # the wheel ships unversioned .so files; the linker records the SONAME
     ln -sf libSDL2-2.0.so "$SDL_DIR/libSDL2-2.0.so.0"
     ln -sf libSDL2_mixer-2.0.so "$SDL_DIR/libSDL2_mixer-2.0.so.0"

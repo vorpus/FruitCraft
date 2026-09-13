@@ -97,6 +97,8 @@ PYBIND11_MODULE(_engine, m) {
     m.def("frame", []() { return game().getFrameCount(); });
     m.def("leave_game", []() { game().leaveGame(); });
     m.def("set_gui", [](bool enable) { game().setGUI(enable); });
+    m.def("set_camera", [](int x, int y) { game().setScreenPosition(Position(x, y)); },
+          "Top-left corner of the 800x600 view, map pixels (UI builds only)");
     m.def("set_random_seed", [](uint32_t seed) { game().setRandomSeed(seed); });
     m.def("disable_triggers", []() { game().disableTriggers(); });
 

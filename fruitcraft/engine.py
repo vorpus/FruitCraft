@@ -60,8 +60,10 @@ class BroodWarGame:
         self.COMMANDS = _engine.COMMANDS
         self.seed = seed
         self.result: bool | None = None  # None = in progress, True = won
-        self._e.set_gui(gui)  # needs a build with the SDL renderer when True
         self._begin_match()
+        # enable the renderer AFTER the map loads: the UI centers its camera
+        # from map dimensions at construction time
+        self._e.set_gui(gui)  # needs a build with the SDL renderer when True
 
     def _begin_match(self):
         self.result = None
@@ -137,3 +139,10 @@ class BroodWarGame:
 
     def map_pixel_size(self) -> tuple[int, int]:
         return self._e.map_width() * 32, self._e.map_height() * 32
+
+    def look_at(self, x: int, y: int, view=(800, 600)):
+        """Center the renderer's camera on a map-pixel position (UI builds)."""
+        w, h = self.map_pixel_size()
+        cx = min(max(int(x) - view[0] // 2, 0), max(w - view[0], 0))
+        cy = min(max(int(y) - view[1] // 2, 0), max(h - view[1], 0))
+        self._e.set_camera(cx, cy)

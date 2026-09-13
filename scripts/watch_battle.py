@@ -68,6 +68,12 @@ def main():
             scenario.script_enemy()
             if game.frame % 12 == 0:
                 ctrl.tick()
+                # follow-cam: keep the action centered
+                units = [u for u in game.my_units() if u["id"] in scenario.our_ids] \
+                    or [u for u in game.enemy_units_all() if u["id"] in scenario.enemy_ids]
+                if units:
+                    game.look_at(np.mean([u["x"] for u in units]),
+                                 np.mean([u["y"] for u in units]))
             game.step(1)
             # pace to real time x speed
             target = (game.frame - frame0) / (24 * args.speed)

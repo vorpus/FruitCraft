@@ -1,0 +1,32 @@
+diff --git a/mini-openbwapi/openbwapi.cpp b/mini-openbwapi/openbwapi.cpp
+index 707b724..87fe3aa 100644
+--- a/mini-openbwapi/openbwapi.cpp
++++ b/mini-openbwapi/openbwapi.cpp
+@@ -1316,6 +1316,14 @@ void Game::setGUI(bool enable) {
+ void Game::setFrameSkip(int frameskip) {
+ }
+ 
++void Game::setScreenPosition(Position pos) {
++#ifdef OPENBW_ENABLE_UI
++	if (impl->funcs.ui) {
++		impl->funcs.ui->ui.screen_pos = {pos.x, pos.y};
++	}
++#endif
++}
++
+ void Game::setCommandOptimizationLevel(int level) {
+ }
+ 
+diff --git a/mini-openbwapi/openbwapi.h b/mini-openbwapi/openbwapi.h
+index 951e9b0..4bfc46e 100644
+--- a/mini-openbwapi/openbwapi.h
++++ b/mini-openbwapi/openbwapi.h
+@@ -1080,7 +1080,7 @@ public:
+ 	double getAverageFPS() {
+ 		return 1.0;
+ 	}
+-	void setScreenPosition(Position) {}
++	void setScreenPosition(Position pos);
+ 	void vPrintf(const char* fmt, va_list args);
+ 	void update();
+ 	
