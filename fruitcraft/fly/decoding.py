@@ -70,19 +70,28 @@ class ActionDecoder:
             calib_rate[action] = float(responses[action][readouts[action]].mean()) / probe_ms
         return cls(readouts, calib_rate, stay_floor=stay_floor)
 
-    def decode(self, flies, slot_ids: np.ndarray, window_ms: float) -> list[str]:
-        """One action per fly slot from spike counts accumulated over window_ms."""
+    def logits_for(self, flies, slot_ids: np.ndarray, window_ms: float) -> np.ndarray:
+        """[n_slots, n_actions] normalized readout activations (1.0 ~ calibration level)."""
         counts = flies.read_spike_counts(neuron_ids=self._flat, batch_ids=slot_ids)
-        actions = []
+        rows = []
         for row in counts:
             means, offset = [], 0
             for size in self._sizes:
                 means.append(row[offset:offset + size].mean())
                 offset += size
-            logits = np.asarray(means) / (self._rates * window_ms)
-            best = int(np.argmax(logits))
-            actions.append(ACTIONS[best] if logits[best] >= self.stay_floor else STAY)
+            rows.append(np.asarray(means) / (self._rates * window_ms))
+        return np.asarray(rows)
+
+    def decode_from_logits(self, logits: np.ndarray) -> list[str]:
+        actions = []
+        for row in logits:
+            best = int(np.argmax(row))
+            actions.append(ACTIONS[best] if row[best] >= self.stay_floor else STAY)
         return actions
+
+    def decode(self, flies, slot_ids: np.ndarray, window_ms: float) -> list[str]:
+        """One action per fly slot from spike counts accumulated over window_ms."""
+        return self.decode_from_logits(self.logits_for(flies, slot_ids, window_ms))
 
 
 def _prototype_observation(drives: dict[str, float]) -> CombatObservation:

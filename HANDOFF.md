@@ -1,4 +1,32 @@
-# FruitCraft — session handoff (updated 2026-09-12, evening: FIRST REAL BATTLES)
+# FruitCraft — session handoff (updated 2026-09-12, night: EVOLUTION + VIEWER)
+
+## Update 2026-09-12 night — evolution works; battle viewer shipped
+- `fruitcraft/evolve.py` + `scripts/evolve_micro.py`: GA over the interface
+  (channel populations, prototypes, amplitude/decision_ms/stay_floor).
+  Run01 (22 gens × pop 20 × 5 shared-seed episodes, ~25 s/gen): best fitness
+  3.85/4.0 at gen 13. **Champion wins 18/20 held-out episodes** vs 2/10 for
+  the hand-engineered mapping. Champion committed: `genomes/champion_run01.npz`
+  (evaluate: `scripts/evolve_micro.py --eval genomes/champion_run01.npz`).
+  NOTE: launch long runs with nohup/setsid — a background-shell timeout killed
+  run01 at gen 21/30 (fitness had plateaued; harmless this time).
+- Introspection plumbing: decoder exposes `logits_for`/`decode_from_logits`,
+  pool keeps `last_logits`, controller keeps `last_observations`/`last_commands`
+  (and `_execute` returns the issued command).
+- `fruitcraft/record.py` + `scripts/record_battle.py`: record battles to
+  compact JSON (sampled unit states every 2 frames + per-decision drives,
+  logits, action, command, deaths). `battles.json` committed: 3 champion +
+  2 pre-evolution episodes.
+- `viewer/index.html` — **Swarm Observer** web replay viewer (published as a
+  Claude artifact; battles.json ships alongside): canvas battlefield with hp
+  arcs, action glyphs, hivemind crosshair, command arrow, death flashes, kill
+  feed; click a marine for its brain panel (13 channel drives, 5 normalized
+  action logits with stay-floor line, decoded action + issued command,
+  decision-history strip); episode chips with WIN/LOSS pills; transport with
+  speed control and death-marked scrubber. To refresh data: rerun
+  record_battle.py and republish index.html + battles.json.
+- `scripts/analyze_run.py` plots run fitness history.
+
+
 
 ## Update 2026-09-12 evening — the game runs; Milestone 7 reached
 - User supplied MPQs -> `bwdata/` (gitignored; engine needs exact names

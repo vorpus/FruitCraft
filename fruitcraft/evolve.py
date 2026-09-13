@@ -27,6 +27,10 @@ from .fly.controller import FlyCombatController, HivemindDirective
 POP_SIZE = 120  # neurons per sensory channel
 
 
+def _clip_lineage(s: str, limit=48) -> str:
+    return s if len(s) <= limit else s[:limit] + "…"
+
+
 @dataclass
 class Genome:
     populations: dict[str, np.ndarray]           # channel -> neuron ids (disjoint)
@@ -101,7 +105,7 @@ def mutate(genome: Genome, candidates: np.ndarray, rng,
         amplitude=float(np.clip(genome.amplitude * np.exp(rng.normal(0, scalar_sigma)), 0.6, 3.0)),
         decision_ms=float(np.clip(genome.decision_ms * np.exp(rng.normal(0, scalar_sigma)), 8, 40)),
         stay_floor=float(np.clip(genome.stay_floor * np.exp(rng.normal(0, scalar_sigma)), 0.03, 0.5)),
-        lineage=f"mut({genome.lineage})")
+        lineage=_clip_lineage(f"mut({genome.lineage})"))
 
 
 def crossover(a: Genome, b: Genome, rng, candidates: np.ndarray | None = None) -> Genome:
@@ -126,7 +130,7 @@ def crossover(a: Genome, b: Genome, rng, candidates: np.ndarray | None = None) -
                   amplitude=pick(a, b).amplitude,
                   decision_ms=pick(a, b).decision_ms,
                   stay_floor=pick(a, b).stay_floor,
-                  lineage=f"x({a.lineage},{b.lineage})")
+                  lineage=_clip_lineage(f"x({a.lineage},{b.lineage})"))
 
 
 class BattleEvaluator:

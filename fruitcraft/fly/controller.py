@@ -70,9 +70,11 @@ class FlyCombatController:
             u["id"]: build_observation(u, enemies, self.directive) for u in units}
         actions = self.pool.tick(observations)
         by_id = {u["id"]: u for u in units}
+        self.last_commands = {}
         for tag, action in actions.items():
-            self._execute(by_id[tag], action, enemies)
+            self.last_commands[tag] = self._execute(by_id[tag], action, enemies)
         self._last_action = dict(actions)
+        self.last_observations = observations  # introspection for viewers/tools
         return actions
 
     def _execute(self, unit: dict, action: str, enemies: list[dict]):
@@ -83,25 +85,26 @@ class FlyCombatController:
         unchanged = self._last_action.get(unit["id"]) == action
         is_idle = unit["idle"] or unit["order"] == ORDER_GUARD
         if unchanged and not is_idle:
-            return
+            return ("continue",)  # let the current order finish
         x, y = unit["x"], unit["y"]
-        if action == "north":
-            self.game.move(unit["id"], x, y - MOVE_STEP)
-        elif action == "south":
-            self.game.move(unit["id"], x, y + MOVE_STEP)
-        elif action == "east":
-            self.game.move(unit["id"], x + MOVE_STEP, y)
-        elif action == "west":
-            self.game.move(unit["id"], x - MOVE_STEP, y)
-        elif action == "attack":
+        offsets = {"north": (0, -MOVE_STEP), "south": (0, MOVE_STEP),
+                   "east": (MOVE_STEP, 0), "west": (-MOVE_STEP, 0)}
+        if action in offsets:
+            dx, dy = offsets[action]
+            self.game.move(unit["id"], x + dx, y + dy)
+            return ("move", x + dx, y + dy)
+        if action == "attack":
             # attack-move (not attack-unit): the unit engages at weapon range
             # instead of chasing into melee, and keeps fighting when its
             # target dies
             if enemies:
                 nearest = min(enemies, key=lambda e: (e["x"] - x) ** 2 + (e["y"] - y) ** 2)
                 self.game.attack_move(unit["id"], nearest["x"], nearest["y"])
-            elif self.directive is not None:
-                self.game.attack_move(unit["id"], int(self.directive.objective_x),
-                                      int(self.directive.objective_y))
+                return ("attack_move", nearest["x"], nearest["y"])
+            if self.directive is not None:
+                tx, ty = int(self.directive.objective_x), int(self.directive.objective_y)
+                self.game.attack_move(unit["id"], tx, ty)
+                return ("attack_move", tx, ty)
         # stay: deliberately no command — a move-to-self would cancel any
         # ongoing attack (and nothing auto-acquires in this engine)
+        return None

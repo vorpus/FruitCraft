@@ -30,6 +30,7 @@ class UnitBrainPool:
         self.decision_ms = decision_ms
         self.reset_each_tick = reset_each_tick
         self.slot_of: dict[int, int] = {}  # unit tag -> fly slot
+        self.last_logits: dict[int, "np.ndarray"] = {}
 
     def sync_units(self, alive_tags) -> None:
         """Allocate brains for new units, release brains of dead ones."""
@@ -52,7 +53,9 @@ class UnitBrainPool:
         self.encoder.apply(self.flies, slots, [observations[t] for t in tags])
         self.flies.reset_spike_counts(slots)
         self.flies.advance_ms(self.decision_ms)
-        actions = self.decoder.decode(self.flies, slots, window_ms=self.decision_ms)
+        logits = self.decoder.logits_for(self.flies, slots, window_ms=self.decision_ms)
+        actions = self.decoder.decode_from_logits(logits)
+        self.last_logits = dict(zip(tags, logits))  # introspection for viewers/tools
         return dict(zip(tags, actions))
 
     @property
