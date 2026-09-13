@@ -1,5 +1,18 @@
 # FruitCraft — session handoff (updated 2026-09-12)
 
+## Update 2026-09-12 (later)
+- Encoder switched to POPULATION CODING: a channel's value sets the fraction
+  of its population stimulated, not per-neuron current (per-neuron current
+  saturates LIF firing above ~threshold/tau, making analog values binary).
+- Command-level behavioral eval on the real graph: 6/6 mixed scenarios produce
+  sensible game commands (navigate to objective via decoded moves or the
+  attack->attack_move-objective fallback; engage nearby enemies). Note the
+  action space is deliberately degenerate with no visible enemy: decoded
+  'attack' falls back to attack-move at the hivemind objective, which IS
+  navigation — evaluate at the command level, not the action-label level.
+- Gain sweep (0.005/0.002/0.001): default 0.005 kept; sub-critical gains not
+  clearly better and weaken calibration. Revisit only for persistent-state mode.
+
 ## Update 2026-09-12
 - All 14 tests pass. Fixed the two initial failures properly:
   - ActionDecoder now normalizes each action's logit by that readout's own

@@ -1,9 +1,14 @@
 """Sensory encoding: per-unit combat observations -> fly neuron stimulation.
 
 Each observation channel owns a disjoint population of real MaleCNS sensory
-neurons. A channel's scalar value in [0, 1] drives its whole population with
-value * amplitude. The hivemind directive is deliberately encoded the same way
-as any other sense — it is a suggestion the fly integrates, not an override.
+neurons, and a channel's scalar value in [0, 1] is POPULATION-CODED: it sets
+the fraction of that population stimulated (at a fixed suprathreshold
+amplitude), not the per-neuron current. With the LIF model, per-neuron current
+saturates the firing rate for any drive above ~threshold/tau, which would make
+analog values effectively binary; the active-fraction code stays graded.
+
+The hivemind directive is deliberately encoded the same way as any other
+sense — it is a suggestion the fly integrates, not an override.
 """
 
 from __future__ import annotations
@@ -86,10 +91,14 @@ class SensoryEncoder:
         flies.clear_stimulation(slot_ids)
         drives = np.array(
             [[obs.channel_drives()[c] for obs in observations] for c in CHANNELS],
-            dtype=np.float32) * self.amplitude
+            dtype=np.float32)
         for ci, channel in enumerate(CHANNELS):
-            values = drives[ci]
-            if not values.any():
+            fractions = drives[ci]
+            if not fractions.any():
                 continue
-            flies.stimulate_population(slot_ids, self.populations[channel],
-                                       values[:, None])
+            pop = self.populations[channel]
+            n_active = np.round(np.clip(fractions, 0, 1) * len(pop)).astype(int)
+            # fly f stimulates the first n_active[f] neurons of the population
+            values = self.amplitude * (
+                np.arange(len(pop))[None, :] < n_active[:, None]).astype(np.float32)
+            flies.stimulate_population(slot_ids, pop, values)
