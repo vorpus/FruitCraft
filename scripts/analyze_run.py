@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/bin/sh
+'''exec' "$(dirname "$0")/../.venv/bin/python" "$0" "$@" #'''
 """Plot an evolution run's fitness history: best and population mean per generation."""
 
 import json

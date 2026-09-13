@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/bin/sh
+'''exec' "$(dirname "$0")/../.venv/bin/python" "$0" "$@" #'''
 """Watch fly-brain battles live in the engine's own SDL window (real BW graphics).
 
 Requires an engine build with the renderer (scripts/build_engine.sh does this

@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/bin/sh
+'''exec' "$(dirname "$0")/../.venv/bin/python" "$0" "$@" #'''
 """Phase 0 smoke test: boot Brood War headless, spawn a marine, move it A->B."""
 
 import sys

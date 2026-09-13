@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/bin/sh
+'''exec' "$(dirname "$0")/../.venv/bin/python" "$0" "$@" #'''
 """Record battles (champion and/or default interface) to JSON for the viewer.
 
 Usage:

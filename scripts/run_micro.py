@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/bin/sh
+'''exec' "$(dirname "$0")/../.venv/bin/python" "$0" "$@" #'''
 """End-to-end micro battle: fly-brain marines vs scripted zerglings.
 
 Requires:
